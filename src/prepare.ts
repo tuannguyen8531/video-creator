@@ -4,7 +4,7 @@ import {createHash, randomUUID} from 'node:crypto';
 import {copyFile, mkdir, readFile, rename, rm, writeFile} from 'node:fs/promises';
 import {createReadStream} from 'node:fs';
 import path from 'node:path';
-import {buildTimeline, projectSchema, toSrt, wrapCaption, type Project, type Segment} from './project';
+import {buildTimeline, projectSchema, toSrt, type Project, type Segment} from './project';
 import {REQUEST_VERSION, resolveVoice, speechSettings, synthesize} from './tts/capcut';
 import {analyzeMouth} from './lipsync';
 import {validatePickupReach} from './animation/motion';
@@ -48,7 +48,6 @@ export async function validateProject(file: string) {
     }
     for (const seg of scene.narration) {
       try {
-        wrapCaption(seg.text);
         if (seg.audio) await probeAudio(path.resolve(path.dirname(file), seg.audio));
         else speechSettings(seg, project);
       } catch (error) {throw new Error(`${scene.id}/${seg.id}: ${(error as Error).message}`);}

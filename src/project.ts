@@ -1,5 +1,6 @@
 import {z} from 'zod';
 
+const dimension = z.number().int().min(240).max(3840).multipleOf(2);
 const id = z.string().regex(/^[a-zA-Z0-9_-]{1,64}$/);
 const text = (max: number) => z.string().trim().min(1).max(max);
 const language = text(35).refine((value) => {try {new Intl.Locale(value); return true;} catch {return false;}}, 'Expected a language tag such as vi-VN or en-US').transform((value) => new Intl.Locale(value).toString());
@@ -35,7 +36,7 @@ const scene = z.discriminatedUnion('layout', [
   }).strict(),
 ]);
 export const projectSchema = z.object({
-  id, title: text(120), width: z.literal(1920).default(1920), height: z.literal(1080).default(1080), fps: z.literal(30).default(30),
+  id, title: text(120), width: dimension.default(1920), height: dimension.default(1080), fps: z.literal(30).default(30),
   voice: text(120).optional(), language: language.optional(), font: text(500).optional(), speed: z.number().min(0.5).max(2).default(1),
   theme: z.object({background: z.string().regex(/^#[\da-fA-F]{6}$/).default('#0b1120'), accent: z.string().regex(/^#[\da-fA-F]{6}$/).default('#64e8c1'), foreground: z.string().regex(/^#[\da-fA-F]{6}$/).default('#f1f5f9')}).strict().default({background: '#0b1120', accent: '#64e8c1', foreground: '#f1f5f9'}),
   scenes: z.array(scene).min(1).max(100),
@@ -132,10 +133,41 @@ export function wrapCaption(text: string, width = 52): string {
   return lines.join('\n');
 }
 
+// Caption timing is estimated within each audio segment; audio/action cues stay intact.
+export function captionCues(video: PreparedVideo) {
+  const width = video.project.width < video.project.height ? 32 : 52;
+  return video.cues.flatMap((cue) => {
+    const sentences = new Intl.Segmenter(cue.language ?? video.project.language, {granularity: 'sentence'}).segment(cue.text);
+    const parts: string[] = [];
+    for (const {segment} of sentences) {
+      let part = '';
+      for (const word of segment.trim().split(/\s+/)) {
+        // Split unbroken text too (URLs or scripts without spaces).
+        for (const token of word.match(new RegExp(`.{1,${width}}`, 'gu')) ?? []) {
+          if (part && part.length + token.length + 1 > width) {parts.push(part); part = '';}
+          part += (part ? ' ' : '') + token;
+        }
+      }
+      if (part) parts.push(part);
+    }
+    const total = parts.reduce((sum, part) => sum + part.length, 0);
+    const duration = cue.endFrame - cue.startFrame;
+    if (duration < parts.length) throw new Error(`Audio too short for captions: ${cue.sceneId}/${cue.segmentId}`);
+    let weight = 0, startFrame = cue.startFrame;
+    return parts.map((text, i) => {
+      weight += text.length;
+      const endFrame = i === parts.length - 1 ? cue.endFrame : Math.min(cue.endFrame - (parts.length - i - 1), Math.max(startFrame + 1, cue.startFrame + Math.round(duration * weight / total)));
+      const caption = {text, startFrame, endFrame, sceneId: cue.sceneId};
+      startFrame = endFrame;
+      return caption;
+    });
+  });
+}
+
 export function toSrt(video: PreparedVideo): string {
   const time = (frame: number) => {
     const ms = Math.round(frame / video.project.fps * 1000);
     return `${Math.floor(ms / 3600000).toString().padStart(2, '0')}:${Math.floor(ms / 60000 % 60).toString().padStart(2, '0')}:${Math.floor(ms / 1000 % 60).toString().padStart(2, '0')},${(ms % 1000).toString().padStart(3, '0')}`;
   };
-  return video.cues.map((c, i) => `${i + 1}\n${time(c.startFrame)} --> ${time(c.endFrame)}\n${wrapCaption(c.text)}\n`).join('\n');
+  return captionCues(video).map((c, i) => `${i + 1}\n${time(c.startFrame)} --> ${time(c.endFrame)}\n${wrapCaption(c.text)}\n`).join('\n');
 }

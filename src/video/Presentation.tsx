@@ -1,6 +1,6 @@
 import React from 'react';
 import {AbsoluteFill, Audio, Img, interpolate, Sequence, spring, staticFile, useCurrentFrame, useVideoConfig} from 'remotion';
-import {wrapCaption, type PreparedScene, type PreparedVideo, type Scene} from '../project';
+import {captionCues, type PreparedScene, type PreparedVideo, type Scene} from '../project';
 import {CharacterStage} from './CharacterStage';
 
 const clamp = {extrapolateLeft: 'clamp', extrapolateRight: 'clamp'} as const;
@@ -18,9 +18,7 @@ function SceneContent({item, video, index, customScenes}: {item: PreparedScene; 
   if (item.scene.layout === 'custom') {
     const Component = customScenes[item.scene.id];
     if (!Component) throw new Error(`Custom scene ${item.scene.id} needs a generated entry. Use npm run render/dev -- --project <file>.`);
-    const cue = video.cues.find((c) => c.sceneId === item.scene.id && frame >= c.startFrame - item.from && frame < c.endFrame - item.from);
     return <AbsoluteFill><Component scene={item.scene} video={video} durationInFrames={item.durationInFrames}/>
-      {item.scene.captions && cue && <div style={{position: 'absolute', left: 180, right: 180, bottom: 60, textAlign: 'center', pointerEvents: 'none'}}><div style={{display: 'inline-block', color: '#fff', background: '#020617dc', borderRadius: 16, padding: '16px 30px', fontSize: 30, lineHeight: 1.5, whiteSpace: 'pre-line'}}>{wrapCaption(cue.text)}</div></div>}
     </AbsoluteFill>;
   }
   if (item.scene.layout === 'character') return <CharacterStage item={item} video={video}/>;
@@ -34,7 +32,6 @@ function SlideContent({item, video, index}: {item: PreparedScene; video: Prepare
   const {fps} = useVideoConfig();
   const panel: React.CSSProperties = {background: '#ffffff08', border: '1px solid #ffffff18', borderRadius: 28, padding: 40};
   const fade = interpolate(frame, [0, 10, durationInFrames - 10, durationInFrames - 1], [0, 1, 1, 0], clamp);
-  const caption = video.cues.find((cue) => cue.sceneId === scene.id && frame >= cue.startFrame - item.from && frame < cue.endFrame - item.from);
   return <AbsoluteFill style={{backgroundColor: theme.background, color: theme.foreground, opacity: fade}}>
     <AbsoluteFill style={{backgroundImage: `radial-gradient(ellipse at 85% 15%, ${theme.accent}18 0%, transparent 55%)`}} />
     <div style={{position: 'absolute', right: -160, top: -270, width: 1000, height: 1000, borderRadius: '50%', border: `1px solid ${theme.accent}22`, transform: `translateY(${Math.sin(frame / 90) * 12}px)`}} />
@@ -55,16 +52,28 @@ function SlideContent({item, video, index}: {item: PreparedScene; video: Prepare
       {scene.layout === 'stat' && <Reveal delay={10}><div style={{fontSize: 175, fontWeight: 700, color: theme.accent, lineHeight: 1.2, letterSpacing: -8}}>{Math.round(scene.value * interpolate(frame, [12, 12 + fps * 1.4], [0, 1], clamp)).toLocaleString('vi-VN')}{scene.suffix}</div><p style={{fontSize: 34, color: '#ffffffb8', marginTop: 15}}>{scene.label}</p></Reveal>}
       {scene.layout === 'comparison' && <div style={{display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 30}}>{[scene.left, scene.right].map((col, i) => <Reveal delay={12 + i * 10} key={i}><div style={{...panel, minHeight: 260, borderColor: i ? `${theme.accent}66` : '#ffffff18'}}><h2 style={{fontSize: 34, margin: '0 0 25px', color: i ? theme.accent : theme.foreground}}>{col.title}</h2>{col.items.map((text, j) => <p key={j} style={{fontSize: 28, margin: '12px 0', lineHeight: 1.5}}>• {text}</p>)}</div></Reveal>)}</div>}
     </div>
-    {caption && <div style={{position: 'absolute', left: 180, right: 180, bottom: 65, display: 'flex', justifyContent: 'center'}}><div style={{fontSize: 31, lineHeight: 1.5, whiteSpace: 'pre-line', textAlign: 'center', background: '#020617df', borderRadius: 18, padding: '17px 32px', maxWidth: 1450}}>{wrapCaption(caption.text)}</div></div>}
     <div style={{position: 'absolute', left: 0, bottom: 0, height: 4, background: theme.accent, width: `${(item.from + frame + 1) / video.durationInFrames * 100}%`}} />
   </AbsoluteFill>;
 }
 
+function Captions({video}: {video: PreparedVideo}) {
+  const frame = useCurrentFrame();
+  const cue = captionCues(video).find((c) => frame >= c.startFrame && frame < c.endFrame);
+  const scene = video.scenes.find((s) => s.scene.id === cue?.sceneId)?.scene;
+  if (!cue || (scene?.layout === 'custom' && !scene.captions)) return null;
+  const size = Math.min(video.project.width, video.project.height) / 1080;
+  return <div style={{position: 'absolute', left: '5%', right: '5%', bottom: '6%', textAlign: 'center', pointerEvents: 'none'}}>
+    <div style={{display: 'inline-block', maxWidth: '100%', boxSizing: 'border-box', color: '#fff', background: '#020617dc', borderRadius: 16 * size, padding: `${16 * size}px ${24 * size}px`, fontSize: 36 * size, lineHeight: 1.4, overflowWrap: 'anywhere'}}>{cue.text}</div>
+  </div>;
+}
+
 export function Presentation({video, customScenes = {}}: {video: PreparedVideo; customScenes?: CustomScenes}) {
+  const scale = Math.min(video.project.width / 1920, video.project.height / 1080);
   return <AbsoluteFill style={{background: video.project.theme.background, fontFamily: video.project.font ? 'VideoProject, VideoNoto, sans-serif' : 'VideoNoto, sans-serif'}}>
     <style>{`@font-face {font-family: VideoNoto; src: url('${staticFile('fonts/NotoSans-Regular.ttf')}'); font-weight: 400;} @font-face {font-family: VideoNoto; src: url('${staticFile('fonts/NotoSans-Bold.ttf')}'); font-weight: 700;}`}</style>
     {video.project.font && <style>{`@font-face {font-family: VideoProject; src: url('${staticFile(video.project.font)}');}`}</style>}
-    {video.scenes.map((item, index) => <Sequence key={item.scene.id} from={item.from} durationInFrames={item.durationInFrames}><SceneContent item={item} video={video} index={index} customScenes={customScenes}/></Sequence>)}
+    {video.scenes.map((item, index) => <Sequence key={item.scene.id} from={item.from} durationInFrames={item.durationInFrames}>{item.scene.layout === 'custom' ? <SceneContent item={item} video={video} index={index} customScenes={customScenes}/> : <div style={{position: 'absolute', width: 1920, height: 1080, left: (video.project.width - 1920 * scale) / 2, top: (video.project.height - 1080 * scale) / 2, transform: `scale(${scale})`, transformOrigin: 'top left'}}><SceneContent item={item} video={video} index={index} customScenes={customScenes}/></div>}</Sequence>)}
+    <Captions video={video}/>
     {video.cues.map((cue) => <Sequence key={`${cue.sceneId}/${cue.segmentId}`} from={cue.startFrame} durationInFrames={cue.endFrame - cue.startFrame}><Audio src={staticFile(cue.audio)} /></Sequence>)}
   </AbsoluteFill>;
 }

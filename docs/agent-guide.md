@@ -45,7 +45,7 @@ Truyền `--project <ten-video>`, thư mục dự án hoặc JSON trong input; C
 |---|---|
 | `id` | 1–64 ký tự chữ Latin, số, `_`, `-`; ID cảnh không trùng trong dự án, ID đoạn không trùng trong cảnh |
 | `title` của dự án | Tối đa 120 ký tự, hiển thị ở header |
-| `width`, `height`, `fps` | Bản đầu chỉ nhận 1920, 1080, 30; có thể bỏ để dùng mặc định |
+| `width`, `height`, `fps` | width/height là số chẵn 240–3840; mặc định 1920 × 1080; fps = 30 |
 | `voice` | Không có mặc định; chọn từ `npm run voices`, hoặc chỉ định từng đoạn / dùng audio cục bộ |
 | `language` | Tag như `vi-VN`, `en-US`; đoạn có thể ghi đè. Nếu bỏ, lấy ngôn ngữ catalog của giọng đã chọn |
 | `font` | Font TTF/OTF/WOFF/WOFF2 cục bộ, đường dẫn tính từ JSON; dùng font có đủ glyph cho ngôn ngữ cần hiển thị |
@@ -74,13 +74,13 @@ CLI giới hạn toàn bộ JSON dự án ở 1 MiB trước khi parse. Giữ h�
 
 ## Lời đọc và audio
 
-Một đoạn có `id`, `text` (tối đa 240 ký tự và phải vừa tối đa ba dòng phụ đề 52 ký tự), tùy chọn `voice`, `language`, `speed`, `pauseAfter` (0–5 giây, mặc định 0.25). Không có voice mặc định: đoạn dùng TTS phải chọn giọng trực tiếp hoặc kế thừa giọng dự án. Chọn ngôn ngữ khác thì chọn giọng phù hợp; nền báo lỗi khi metadata catalog không khớp, không tự dịch hoặc đổi giọng thay người dùng.
+Một đoạn có `id`, `text` (tối đa 240 ký tự), tùy chọn `voice`, `language`, `speed`, `pauseAfter` (0–5 giây, mặc định 0.25). Không có voice mặc định: đoạn dùng TTS phải chọn giọng trực tiếp hoặc kế thừa giọng dự án. Chọn ngôn ngữ khác thì chọn giọng phù hợp; nền báo lỗi khi metadata catalog không khớp, không tự dịch hoặc đổi giọng thay người dùng.
 
 Ngôn ngữ thực được gửi qua SSML/header và tham gia khóa cache. Tag ngôn ngữ không tự biến một giọng thành giọng đa ngôn ngữ hoặc thay vùng giọng. Catalog là dữ liệu cục bộ, không bảo đảm mọi giọng còn hoạt động; cần kiểm chứng giọng mới khi dùng thật. Font Noto Sans đi kèm hỗ trợ Latin/tiếng Việt; các hệ chữ khác cần font phù hợp qua `font` hoặc font do component tự khai báo.
 
 Nếu muốn dùng lời đọc đã có, khai báo `audio` là đường dẫn MP3/WAV cục bộ. `text` phải khớp lời nói trong file. Đoạn đó không gọi CapCut; đây là nguồn audio do người dùng chọn, không phải fallback khi cloud lỗi. CLI kiểm tra audio có stream và thời lượng dương, tối đa 10 phút/đoạn.
 
-Phụ đề hiện theo toàn bộ đoạn; chia nhỏ đoạn ở ranh giới câu/ý để dễ đọc, tránh cắt quá vụn làm đứt ngữ điệu. Không giả lập mốc từng từ. Tên sản phẩm, số và chữ viết tắt cần được soạn theo cách đọc mong muốn; nền không có bộ chuẩn hóa phát âm riêng.
+Phụ đề tự tách theo câu và chia câu dài thành trang ngắn (32 ký tự khi khung dọc, 52 khi ngang/vuông), chỉ hiện một trang mỗi thời điểm. Mốc trong cùng đoạn audio được ước lượng theo độ dài chữ, không phải nhận dạng lời nói. Muốn khớp ranh giới câu chính xác, viết mỗi câu thành một narration riêng. Audio và action vẫn dùng cue đoạn gốc. Tên sản phẩm, số và chữ viết tắt cần được soạn theo cách đọc mong muốn; nền không có bộ chuẩn hóa phát âm riêng.
 
 ## Timeline và cache
 
@@ -124,4 +124,10 @@ SRT và phụ đề trong video dùng cùng cue. `prepared.json` là props cho R
 | Render tốn RAM | Thử `--concurrency 1`, giảm số lớp/hiệu ứng trong cảnh |
 | Cảnh báo Zod từ Remotion | Bản hiện tại khóa 4.5.4, không override; chạy `npm ci` để đồng bộ lockfile. Advisory bộ nhớ vẫn còn, xem bước 07 trong docs/phase |
 
-Chưa xây dựng batch TTS, timestamps từng từ, nhạc nền, tỷ lệ khung hình khác hay giao diện kéo thả. Đây là phần mở rộng sau khi có nhu cầu thực tế.
+Chưa xây dựng batch TTS, timestamps từng từ, nhạc nền hay giao diện kéo thả. Đây là phần mở rộng sau khi có nhu cầu thực tế.
+
+## Kích thước điện thoại
+
+Đặt `"width": 1080, "height": 1920` ở cấp dự án trong input/project.json để xuất 9:16. Có thể dùng 1080 × 1350 (4:5), 1080 × 1080 (1:1), hoặc mặc định 1920 × 1080 (16:9).
+
+Các cảnh mẫu giữ canvas 1920 × 1080 và thu vừa, căn giữa, có khoảng nền trống khi đổi tỷ lệ; không tự cắt hình hay tự dàn lại. Muốn video dọc tận dụng toàn khung, dùng custom component lấy width/height từ `useVideoConfig()` để bố trí theo khung thực. Phụ đề của nền được đặt theo khung xuất, độc lập với canvas cảnh mẫu. Chừa vùng đáy cho phụ đề khi thiết kế cảnh riêng.

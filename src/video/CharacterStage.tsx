@@ -1,7 +1,7 @@
 import React from 'react';
 import {AbsoluteFill, interpolate, useCurrentFrame} from 'remotion';
 import {jointBetween, stageState, type CharacterScene, type Point} from '../animation/motion';
-import {wrapCaption, type PreparedScene, type PreparedVideo, type MouthCue} from '../project';
+import {type PreparedScene, type PreparedVideo, type MouthCue} from '../project';
 
 const line = (a: Point, b: Point) => `M${a.x},${a.y} L${b.x},${b.y}`;
 function Arm({side, hand, shirt, skin, gesture, angle = 0}: {side: number; hand: Point; shirt: string; skin: string; gesture: string; angle?: number}) {
@@ -100,7 +100,6 @@ export function CharacterStage({item, video}: {item: PreparedScene; video: Prepa
   const local = useCurrentFrame(), frame = local + item.from;
   const scene = item.scene as CharacterScene;
   const state = stageState(scene, video.cues, frame, video.project.fps);
-  const cue = video.cues.find((c) => c.sceneId === scene.id && frame >= c.startFrame && frame < c.endFrame);
   const fade = interpolate(local, [0, 10, item.durationInFrames - 10, item.durationInFrames - 1], [0, 1, 1, 0], {extrapolateLeft: 'clamp', extrapolateRight: 'clamp'});
   const zoom = 1 + Math.min(local / item.durationInFrames, 1) * 0.025;
   return <AbsoluteFill style={{background: '#f5efe4', opacity: fade, color: '#203844'}}>
@@ -131,6 +130,5 @@ export function CharacterStage({item, video}: {item: PreparedScene; video: Prepa
     </svg>
     <div style={{position: 'absolute', top: 58, left: 100, color: '#587c78', fontSize: 19, letterSpacing: 3, textTransform: 'uppercase'}}>{scene.eyebrow ?? 'Câu chuyện bằng chuyển động'}</div>
     <div style={{position: 'absolute', top: 96, left: 100, fontWeight: 700, fontSize: 44}}>{scene.title}</div>
-    {cue && <div style={{position: 'absolute', left: 180, right: 180, bottom: 55, textAlign: 'center'}}><div style={{display: 'inline-block', maxWidth: 1450, background: '#fffaf1ee', padding: '18px 32px', borderRadius: 18, fontSize: 30, lineHeight: 1.5, whiteSpace: 'pre-line', boxShadow: '0 8px 30px #233d4410'}}>{wrapCaption(cue.text)}</div></div>}
   </AbsoluteFill>;
 }

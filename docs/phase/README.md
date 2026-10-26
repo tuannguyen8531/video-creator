@@ -17,6 +17,7 @@ Các file ghi kết quả theo bước; cập nhật trạng thái ngay khi có 
 | 11 — Tự chọn hình thức, giọng/ngôn ngữ và cảnh React riêng | [11-flexible-authoring.md](11-flexible-authoring.md) |
 | 12 — Input/output riêng từng dự án, chuyển dữ liệu và kiểm chứng | [12-project-folders.md](12-project-folders.md) |
 | 13 — Bỏ qua toàn bộ projects trong Git theo phản hồi | [13-project-git-ignore.md](13-project-git-ignore.md) |
+| 14 — Phụ đề ngắn và kích thước tùy chọn | [14-captions-and-frame-size.md](14-captions-and-frame-size.md) |
 
 Phạm vi bản đầu tương ứng giai đoạn 1–4 trong [kế hoạch](../implementation-plan.md). Giai đoạn 5 là nâng cấp theo nhu cầu và chưa thuộc nghiệm thu bản đầu.
 

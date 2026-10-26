@@ -4,7 +4,7 @@ import {access, readFile, mkdtemp, mkdir, writeFile, rm, readdir} from 'node:fs/
 import {tmpdir} from 'node:os';
 import path from 'node:path';
 import {execFileSync} from 'node:child_process';
-import {projectSchema, buildTimeline, toSrt, wrapCaption} from '../src/project';
+import {projectSchema, buildTimeline, toSrt, wrapCaption, captionCues} from '../src/project';
 import {cacheKey, prepareProject, validateProject} from '../src/prepare';
 import {escapeXml, headerSign, makeSsml, resolveVoice, speechSettings, synthesize} from '../src/tts/capcut';
 import {createStudioEntry} from '../src/studio';
@@ -204,7 +204,8 @@ test('timeline rounds up audio frames, preserves padding, does not overlap and S
   assert.equal(video.cues[0].endFrame, 46);
   assert.equal(video.cues[1].startFrame, 54);
   assert.equal(video.durationInFrames, 108);
-  assert.match(toSrt(video), /00:00:00,500 --> 00:00:01,533/);
+  assert.match(toSrt(video), /00:00:00,500 -->/);
+  assert.match(toSrt(video), /--> 00:00:01,533/);
   assert.throws(() => buildTimeline(tiny, []), /Missing/);
   assert.throws(() => buildTimeline(tiny, [{sceneId: 'opening', segmentId: 'hello', duration: Infinity, src: 'bad'}]), /invalid/);
 });
@@ -323,4 +324,24 @@ test('real audio preparation caches, survives reordering, regenerates changed/co
     process.chdir(originalDir); globalThis.fetch = originalFetch;
     await rm(dir, {recursive: true, force: true});
   }
+});
+
+test('phone dimensions and sentence captions preserve audio and have no overlapping pages', () => {
+  for (const [width, height] of [[1080, 1920], [1080, 1350], [1080, 1080], [1920, 1080]]) {
+    const p = projectSchema.parse({id: 'phone', title: 'Phone', width, height, scenes: [{id: 's', title: 'Title', layout: 'title', narration: [{id: 'n', audio: 'local.mp3', text: 'First sentence. Second sentence is long enough to need several short caption pages on a phone screen.'}]}]});
+    const video = buildTimeline(p, [{sceneId: 's', segmentId: 'n', src: 'local.mp3', duration: 8}]);
+    const captions = captionCues(video);
+    assert.equal(video.cues.length, 1);
+    assert.equal(captions[0].text, 'First sentence.');
+    assert.equal(captions[0].startFrame, video.cues[0].startFrame);
+    assert.equal(captions.at(-1)!.endFrame, video.cues[0].endFrame);
+    assert.equal(captions.map(c => c.text).join(' '), video.cues[0].text);
+    captions.forEach((c, i) => {
+      assert.ok(c.endFrame > c.startFrame);
+      assert.ok(c.text.length <= (width < height ? 32 : 52));
+      if (i) assert.equal(c.startFrame, captions[i - 1].endFrame);
+    });
+    assert.equal(toSrt(video).split('-->').length - 1, captions.length);
+  }
+  for (const width of [0, 241, 1080.5, 4000]) assert.throws(() => projectSchema.parse({...example, width}));
 });

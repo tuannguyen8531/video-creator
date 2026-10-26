@@ -1,0 +1,10 @@
+node_modules/
+.cache/
+out/
+public/generated/
+.env
+*.log
+
+/projects/
+/.work/
+/output/

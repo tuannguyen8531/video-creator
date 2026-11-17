@@ -2,6 +2,12 @@
 
 Nền tạo video cho AI agent bằng npm, TypeScript, React và Remotion. Agent chọn hình thức, giọng và ngôn ngữ theo yêu cầu: thuyết trình, hoạt hình, cảnh React tự thiết kế hoặc kết hợp. Các dự án mẫu là ví dụ tham khảo; nền không tự chọn một mẫu hay giọng cố định.
 
+## Giấy phép
+
+Copyright 2026 SeventhS (tuannguyen8531).
+
+Mã nguồn dự án được cấp phép theo [Apache License 2.0](LICENSE). Các thành phần bên thứ ba giữ giấy phép riêng; xem [thông báo và giấy phép thành phần sử dụng lại](THIRD_PARTY_NOTICES.md).
+
 ## Bắt đầu
 
 Yêu cầu: Node.js >=22 (đã kiểm chứng 24.14.0), npm, `ffmpeg` và `ffprobe` trên PATH. Linux cần thư viện hệ thống cho Chrome; xem [tài liệu Remotion](https://www.remotion.dev/docs/miscellaneous/linux-dependencies). Font tiếng Việt đã có trong dự án.

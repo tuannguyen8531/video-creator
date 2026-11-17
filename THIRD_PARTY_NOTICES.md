@@ -1,5 +1,7 @@
 # Third-party notices
 
+`src/tts/capcut.ts` retains the notice: Copyright 2026 Hacht. Licensed under Apache-2.0. See `LICENSE` for the full license text.
+
 The client has been rewritten in TypeScript, uses Node.js cryptography and fetch, and changes timeout, retry, validation, cache and error behavior. No Python runtime is included.
 
 `public/fonts/NotoSans-Regular.ttf` and `NotoSans-Bold.ttf` are Noto fonts distributed under the SIL Open Font License 1.1. Copyright and license notices from the installed Debian package are included in `licenses/Noto-fonts.txt`.

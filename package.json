@@ -15,6 +15,7 @@
     "prepare": "node --import tsx scripts/cli.ts prepare",
     "dev": "node --import tsx scripts/cli.ts dev",
     "render": "node --import tsx scripts/cli.ts render",
+    "deck-audio": "node --import tsx scripts/generate-deck-audio.ts",
     "browser": "remotion browser ensure",
     "setup:lipsync": "node --import tsx scripts/setup-lipsync.ts"
   },
